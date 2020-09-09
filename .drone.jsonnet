@@ -80,7 +80,7 @@ local Pipeline(platform) = {
     volumes: [pipeline._volumes.docker, pipeline._volumes.mdb],
     commands: [
       // clone regression test repo
-      'git clone --recurse-submodules --branch $${REGRESSION_BRANCH:develop} --depth 1 https://github.com/mariadb-corporation/mariadb-columnstore-regression-test',
+      'git clone --recurse-submodules --branch ${REGRESSION_BRANCH:-develop} --depth 1 https://github.com/mariadb-corporation/mariadb-columnstore-regression-test',
       'docker run --volume /sys/fs/cgroup:/sys/fs/cgroup:ro --env DEBIAN_FRONTEND=noninteractive --env MCS_USE_S3_STORAGE=0 --name regression$${DRONE_BUILD_NUMBER} --privileged --detach ' + img + ' ' + init + ' --unit=basic.target',
       'docker cp result regression$${DRONE_BUILD_NUMBER}:/',
       'docker cp mariadb-columnstore-regression-test regression$${DRONE_BUILD_NUMBER}:/',
@@ -95,7 +95,7 @@ local Pipeline(platform) = {
       'docker exec -t regression$${DRONE_BUILD_NUMBER} systemctl start mariadb',
       'docker exec -t regression$${DRONE_BUILD_NUMBER} systemctl start mariadb-columnstore',
       // run regression test000 on pull request and manual build events. on other events run all tests
-      'docker exec -t --workdir /mariadb-columnstore-regression-test/mysql/queries/nightly/alltest regression$${DRONE_BUILD_NUMBER} ./go.sh  --tests=test$${REGRESSION_TEST_NUMBER:000}.sh',
+      'docker exec -t --workdir /mariadb-columnstore-regression-test/mysql/queries/nightly/alltest regression$${DRONE_BUILD_NUMBER} ./go.sh  --tests=test${REGRESSION_TEST_NUMBER:-000}.sh',
     ],
   },
   regressionlog:: {
@@ -130,10 +130,10 @@ local Pipeline(platform) = {
              commands: [
                'mkdir -p /mdb/' + builddir + ' && cd /mdb/' + builddir,
                'git config --global url."https://github.com/".insteadOf git@github.com:',
-               'git clone --recurse-submodules --branch $${SERVER_BRANCH} --depth 1 https://github.com/MariaDB/server .',
+               'git clone --recurse-submodules --branch ${SERVER_BRANCH:-10.6} --depth 1 https://github.com/MariaDB/server .',
                'echo "server commit" && git rev-parse HEAD',
                'rm -rf storage/columnstore/columnstore',
-               'git clone --recurse-submodules --branch $${ENGINE_BRANCH} --depth 1 https://github.com/mariadb-corporation/mariadb-columnstore-engine storage/columnstore/columnstore',
+               'git clone --recurse-submodules --branch ${ENGINE_BRANCH:-develop} --depth 1 https://github.com/mariadb-corporation/mariadb-columnstore-engine storage/columnstore/columnstore',
                'cd storage/columnstore/columnstore && echo "engine commit:" && git rev-parse HEAD',
                'git config cmake.update-submodules no',
              ],
