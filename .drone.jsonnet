@@ -131,6 +131,7 @@ local Pipeline(platform) = {
                'mkdir -p /mdb/' + builddir + ' && cd /mdb/' + builddir,
                'git config --global url."https://github.com/".insteadOf git@github.com:',
                'git clone --recurse-submodules --branch ${SERVER_BRANCH:-10.6} --depth 1 https://github.com/MariaDB/server .',
+               'git config cmake.update-submodules no',
                'echo "server commit" && git rev-parse HEAD',
                'rm -rf storage/columnstore/columnstore',
                'git clone --recurse-submodules --branch ${ENGINE_BRANCH:-develop} --depth 1 https://github.com/mariadb-corporation/mariadb-columnstore-engine storage/columnstore/columnstore',
