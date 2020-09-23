@@ -11,14 +11,14 @@ local deb_build_deps = 'apt update && apt install --yes --no-install-recommends 
 
 local platformMap(platform) =
   local platform_map = {
-      'opensuse/leap:15': 'zypper ' + rpm_build_deps + ' cmake libboost_system-devel libboost_filesystem-devel libboost_thread-devel libboost_regex-devel libboost_date_time-devel libboost_chrono-devel libboost_atomic-devel && cmake ' + cmakeflags + ' -DRPM=sles15 && make -j$(nproc) package',
-      'centos:7': 'yum install -y epel-release && yum install -y cmake3 && ln -s /usr/bin/cmake3 /usr/bin/cmake && yum ' + rpm_build_deps + ' && cmake ' + cmakeflags + ' -DRPM=centos7 && make -j$(nproc) package',
-      'centos:8': "yum install -y libgcc && sed -i 's/enabled=0/enabled=1/' /etc/yum.repos.d/CentOS-PowerTools.repo && yum " + rpm_build_deps + ' cmake && cmake ' + cmakeflags + ' -DRPM=centos8 && make -j$(nproc) package',
-      'debian:9': deb_build_deps + " && CMAKEFLAGS='" + cmakeflags + " -DDEB=stretch' debian/autobake-deb.sh",
-      'debian:10': deb_build_deps + " && CMAKEFLAGS='" + cmakeflags + " -DDEB=buster' debian/autobake-deb.sh",
-      'ubuntu:16.04': deb_build_deps + " && CMAKEFLAGS='" + cmakeflags + " -DDEB=xenial' debian/autobake-deb.sh",
-      'ubuntu:18.04': deb_build_deps + " && CMAKEFLAGS='" + cmakeflags + " -DDEB=bionic' debian/autobake-deb.sh",
-      'ubuntu:20.04': deb_build_deps + " && CMAKEFLAGS='" + cmakeflags + " -DDEB=focal' debian/autobake-deb.sh",
+    'opensuse/leap:15': 'zypper ' + rpm_build_deps + ' cmake libboost_system-devel libboost_filesystem-devel libboost_thread-devel libboost_regex-devel libboost_date_time-devel libboost_chrono-devel libboost_atomic-devel && cmake ' + cmakeflags + ' -DRPM=sles15 && make -j$(nproc) package',
+    'centos:7': 'yum install -y epel-release && yum install -y cmake3 && ln -s /usr/bin/cmake3 /usr/bin/cmake && yum ' + rpm_build_deps + ' && cmake ' + cmakeflags + ' -DRPM=centos7 && make -j$(nproc) package',
+    'centos:8': "yum install -y libgcc && sed -i 's/enabled=0/enabled=1/' /etc/yum.repos.d/CentOS-PowerTools.repo && yum " + rpm_build_deps + ' cmake && cmake ' + cmakeflags + ' -DRPM=centos8 && make -j$(nproc) package',
+    'debian:9': deb_build_deps + " && CMAKEFLAGS='" + cmakeflags + " -DDEB=stretch' debian/autobake-deb.sh",
+    'debian:10': deb_build_deps + " && CMAKEFLAGS='" + cmakeflags + " -DDEB=buster' debian/autobake-deb.sh",
+    'ubuntu:16.04': deb_build_deps + " && CMAKEFLAGS='" + cmakeflags + " -DDEB=xenial' debian/autobake-deb.sh",
+    'ubuntu:18.04': deb_build_deps + " && CMAKEFLAGS='" + cmakeflags + " -DDEB=bionic' debian/autobake-deb.sh",
+    'ubuntu:20.04': deb_build_deps + " && CMAKEFLAGS='" + cmakeflags + " -DDEB=focal' debian/autobake-deb.sh",
   };
   platform_map[platform];
 
@@ -38,8 +38,8 @@ local Pipeline(platform) = {
       path: '/var/run/docker.sock',
     },
   },
-  publish_pkgs:: {
-    name: 'publish pkgs',
+  publish(step_prefix='pkg'):: {
+    name: 'publish ' + step_prefix,
     image: 'plugins/s3-sync',
     when: {
       status: ['success', 'failure'],
@@ -54,24 +54,7 @@ local Pipeline(platform) = {
       },
       source: 'result',
       target: event + '/${DRONE_BUILD_NUMBER}/' + std.strReplace(std.strReplace(platform, ':', ''), '/', '-'),
-    },
-  },
-  publish_regression:: {
-    name: 'publish regression',
-    image: 'plugins/s3-sync',
-    when: {
-      status: ['success', 'failure'],
-    },
-    settings: {
-      bucket: 'cspkg',
-      access_key: {
-        from_secret: 'aws_access_key_id',
-      },
-      secret_key: {
-        from_secret: 'aws_secret_access_key',
-      },
-      source: 'result',
-      target: event + '/${DRONE_BUILD_NUMBER}/' + std.strReplace(std.strReplace(platform, ':', ''), '/', '-'),
+      delete: 'true',
     },
   },
   regression:: {
@@ -94,8 +77,7 @@ local Pipeline(platform) = {
       // start mariadb and mariadb-columnstore services
       'docker exec -t regression$${DRONE_BUILD_NUMBER} systemctl start mariadb',
       'docker exec -t regression$${DRONE_BUILD_NUMBER} systemctl start mariadb-columnstore',
-      // run regression test000 on pull request and manual build events. on other events run all tests
-      'docker exec -t --workdir /mariadb-columnstore-regression-test/mysql/queries/nightly/alltest regression$${DRONE_BUILD_NUMBER} ./go.sh  --tests=test${REGRESSION_TEST_NUMBER:-000}.sh',
+      'docker exec -t --workdir /mariadb-columnstore-regression-test/mysql/queries/nightly/alltest regression$${DRONE_BUILD_NUMBER} ./go.sh  --tests=${REGRESSION_TESTS:-test000.sh}',
     ],
   },
   regressionlog:: {
@@ -184,10 +166,10 @@ local Pipeline(platform) = {
              ],
            },
          ] +
-         [pipeline.publish_pkgs] +
+         [pipeline.publish()] +
          [pipeline.regression] +
          [pipeline.regressionlog] +
-         [pipeline.publish_regression],
+         [pipeline.publish('regression')],
   volumes: [pipeline._volumes.mdb { temp: {} }, pipeline._volumes.docker { host: { path: '/var/run/docker.sock' } }],
   trigger: {
     event: event,
