@@ -91,7 +91,7 @@ local Pipeline(platform) = {
       'echo "---------- end columnstore regression short report ----------"',
       'echo',
       'docker cp regression$${DRONE_BUILD_NUMBER}:/mariadb-columnstore-regression-test/mysql/queries/nightly/alltest/testErrorLogs.tgz /drone/src/result/ || echo "missing testErrorLogs.tgz"',
-      'docker stop regression$${DRONE_BUILD_NUMBER} && docker rm regression$${DRONE_BUILD_NUMBER} || echo "cleanup regression failure"',
+      'if [ -z ${NOCLEANUP+x} ]; then docker stop regression$${DRONE_BUILD_NUMBER} && docker rm regression$${DRONE_BUILD_NUMBER} || echo "cleanup regression failure"; else echo "skipping regression cleanup"; fi',
     ],
     when: {
       status: ['success', 'failure'],
