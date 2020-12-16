@@ -513,18 +513,26 @@ void TupleAnnexStep::executeNoOrderByWithDistinct()
             {
                 pair<DistinctMap_t::iterator, bool> inserted;
 
+                Row tmpRowOut(fRowIn);
+
                 if (fConstant)
-                    fConstant->fillInConstants(fRowIn, fRowOut);
+                    fConstant->fillInConstants(fRowIn, tmpRowOut);
                 else
-                    copyRow(fRowIn, &fRowOut);
+                    copyRow(fRowIn, &tmpRowOut);
 
                 ++fRowsProcessed;
                 fRowIn.nextRow();
 
-                inserted = distinctMap->insert(fRowOut.getPointer());
+                inserted = distinctMap->insert(tmpRowOut.getPointer());
 
                 if (inserted.second)
                 {
+                    // skip first limit-start rows
+                    if (distinctMap->size() <= fLimitStart)
+                    {
+                        continue;
+                    }
+
                     if (UNLIKELY(fRowsReturned >= fLimitCount))
                     {
                         fLimitHit = true;
@@ -533,6 +541,7 @@ void TupleAnnexStep::executeNoOrderByWithDistinct()
                     }
 
                     ++fRowsReturned;
+                    copyRow(tmpRowOut, &fRowOut);
                     fRowGroupOut.incRowCount();
                     fRowOut.nextRow();
 
