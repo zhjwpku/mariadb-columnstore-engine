@@ -45,6 +45,7 @@ class Row;
 
 namespace execplan
 {
+class FunctionColumn;
 extern const std::string colDataTypeToString(CalpontSystemCatalog::ColDataType cdt);
 }
 
@@ -81,6 +82,11 @@ public:
     {
         std::unique_lock<std::mutex> l(tzMutex);
         fTimeZone = timeZone;
+    }
+
+    virtual bool fix(execplan::FunctionColumn &col) const
+    {
+        return false;
     }
 
     virtual execplan::CalpontSystemCatalog::ColType operationType(FunctionParm& fp, execplan::CalpontSystemCatalog::ColType& resultType) = 0;

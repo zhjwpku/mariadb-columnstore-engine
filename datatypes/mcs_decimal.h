@@ -428,6 +428,17 @@ class Decimal: public TSInt128
             return TSInt128(roundedValue);
         }
 
+        int64_t narrowRound() const
+        {
+            int64_t scaleDivisor;
+            getScaleDivisor(scaleDivisor, scale);
+            int64_t intg = value / scaleDivisor;
+            int64_t frac = value % scaleDivisor;
+            if (frac * 2 >= scaleDivisor)
+                intg < 0 ? intg-- : intg++;
+            return intg;
+        }
+
         // MOD operator for an integer divisor to be used
         // for integer rhs
         inline TSInt128 operator%(const TSInt128& div) const

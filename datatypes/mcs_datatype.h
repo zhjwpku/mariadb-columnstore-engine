@@ -167,6 +167,11 @@ public:
           scale(0),
           precision(-1)
       {}
+      TypeAttributesStd(int32_t w, int32_t s, int32_t p)
+         :colWidth(w),
+          scale(s),
+          precision(p)
+      {}
       /**
           @brief Convenience method to get int128 from a std::string.
       */
@@ -262,6 +267,38 @@ public:
                 colDataType == UDECIMAL) &&
                colWidth == MAXDECIMALWIDTH;
     }
+
+    bool isUnsignedInteger() const
+    {
+        switch (colDataType)
+        {
+           case datatypes::SystemCatalog::UTINYINT:
+           case datatypes::SystemCatalog::USMALLINT:
+           case datatypes::SystemCatalog::UMEDINT:
+           case datatypes::SystemCatalog::UINT:
+           case datatypes::SystemCatalog::UBIGINT:
+              return true;
+           default:
+             return false;
+         }
+    }
+
+    bool isSignedInteger() const
+    {
+       switch (colDataType)
+       {
+          case datatypes::SystemCatalog::TINYINT:
+          case datatypes::SystemCatalog::SMALLINT:
+          case datatypes::SystemCatalog::MEDINT:
+          case datatypes::SystemCatalog::INT:
+          case datatypes::SystemCatalog::BIGINT:
+              return true;
+
+          default:
+              return false;
+       }
+    }
+
   };
 
 };
